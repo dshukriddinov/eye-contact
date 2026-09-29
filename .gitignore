@@ -1,0 +1,12 @@
+_sdk/
+.venv/
+__pycache__/
+*.mp4
+*.mov
+*.mkv
+*.report.json
+workdir/
+out/
+gui_settings.json
+runtime/
+models/

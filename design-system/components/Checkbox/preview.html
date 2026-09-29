@@ -1,0 +1,26 @@
+<!-- @dsCard group="Input" height=64 subtitle="rest, checked, disabled" -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Checkbox — preview</title>
+<style>
+  html, body { margin:0; }
+  body { background:var(--surface-100); font-family:var(--font-sans); padding:var(--space-4); box-sizing:border-box; }
+  .row { display:flex; align-items:center; gap:var(--space-5); }
+  .item { display:flex; align-items:center; gap:var(--space-2); cursor:pointer; }
+  .box { width:16px; height:16px; border-radius:var(--radius-sm); border:1.5px solid var(--border-strong); background:var(--surface-200); display:inline-flex; align-items:center; justify-content:center; flex:none; }
+  .box.checked { background:var(--accent); border-color:var(--accent); }
+  .box.checked svg { width:11px; height:11px; }
+  .box.disabled { background:var(--surface-400); border-color:var(--surface-400); }
+  .item.disabled { color:var(--ink-tertiary); cursor:not-allowed; }
+</style>
+</head>
+<body>
+<div class="row">
+  <label class="item body"><span class="box"></span>HEVC</label>
+  <label class="item body"><span class="box checked"><svg viewBox="0 0 20 20" fill="none" stroke="var(--on-accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l4 4 8-8"/></svg></span>HEVC</label>
+  <label class="item body disabled"><span class="box disabled"></span>HEVC</label>
+</div>
+</body>
+</html>

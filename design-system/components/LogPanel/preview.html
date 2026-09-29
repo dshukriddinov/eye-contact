@@ -1,0 +1,31 @@
+<!-- @dsCard group="Layout" height=200 subtitle="scrolling, monospace, one error line" -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>LogPanel — preview</title>
+<style>
+  html, body { margin:0; }
+  body { background:var(--surface-100); font-family:var(--font-sans); padding:var(--space-4); box-sizing:border-box; }
+  .panel { max-width:560px; background:var(--surface-200); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
+  .head { padding:var(--space-3) var(--space-3) 0; color:var(--ink); }
+  .lines { padding:var(--space-2) var(--space-3) var(--space-3); }
+  .line { display:flex; gap:var(--space-2); padding:2px 0; white-space:nowrap; overflow:hidden; }
+  .ts { color:var(--ink-tertiary); flex:none; }
+  .msg { color:var(--ink-secondary); overflow:hidden; text-overflow:ellipsis; }
+  .line.err .msg, .line.err .ts { color:var(--danger); }
+</style>
+</head>
+<body>
+<div class="panel">
+  <div class="head heading">Jurnal</div>
+  <div class="lines">
+    <div class="line code"><span class="ts">[09:32:14]</span><span class="msg">DSBA8944.MOV ishlanmoqda (1/1)</span></div>
+    <div class="line code"><span class="ts">[09:34:02]</span><span class="msg">Chunk 3/7 tayyor (120 s)</span></div>
+    <div class="line code"><span class="ts">[09:35:47]</span><span class="msg">Chunk 4/7 tayyor (120 s)</span></div>
+    <div class="line code err"><span class="ts">[09:41:10]</span><span class="msg">XATO: NVENC ishga tushmadi — drayver ≤ 570</span></div>
+    <div class="line code"><span class="ts">[09:41:11]</span><span class="msg">CPU libx264 bilan davom etilmoqda</span></div>
+  </div>
+</div>
+</body>
+</html>

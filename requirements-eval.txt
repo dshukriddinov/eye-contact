@@ -1,0 +1,5 @@
+# tools/eval.py uchun (ixtiyoriy, faqat dasturchi): runtime\python\python.exe -m pip install -r requirements-eval.txt
+# Modellar models/ papkasiga: w600k_r50.onnx (insightface buffalo_l.zip), face_landmarker.task (MediaPipe),
+# resnet34_gaze.onnx (github.com/yakhyo/gaze-estimation releases/weights)
+onnxruntime>=1.19
+mediapipe>=0.10

@@ -1,0 +1,41 @@
+<!-- @dsCard group="Actions" height=104 subtitle="primary, secondary, ghost, icon, disabled" -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Button — preview</title>
+<style>
+  html, body { margin:0; }
+  body { background:var(--surface-100); font-family:var(--font-sans); padding:var(--space-4); box-sizing:border-box; }
+  .row { display:flex; align-items:center; gap:var(--space-3); }
+  .row + .row { margin-top:var(--space-3); }
+  button { appearance:none; border:none; cursor:pointer; border-radius:var(--radius-md); min-height:32px; padding:var(--space-2) var(--space-3); }
+  .btn-primary { background:var(--accent); color:var(--on-accent); }
+  .btn-primary:hover { background:var(--accent-strong); }
+  .btn-primary:disabled { background:var(--surface-400); color:var(--ink-tertiary); cursor:not-allowed; }
+  .btn-secondary { background:var(--surface-200); color:var(--ink); border:1px solid var(--border-strong); }
+  .btn-secondary:hover { background:var(--surface-300); }
+  .btn-ghost { background:transparent; color:var(--ink-secondary); padding:var(--space-2) var(--space-2); }
+  .btn-ghost:hover { background:var(--surface-300); color:var(--ink); }
+  .btn-icon { background:var(--surface-200); color:var(--ink-secondary); border:1px solid var(--border-strong); width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+  .btn-icon:hover { background:var(--surface-300); color:var(--ink); }
+  .btn-icon svg { width:16px; height:16px; }
+  .focused { box-shadow: var(--focus-ring); }
+</style>
+</head>
+<body>
+<div class="row">
+  <button class="btn-primary body">Boshlash</button>
+  <button class="btn-secondary body">Preview (30 s, yonma-yon)</button>
+  <button class="btn-ghost body">Roʻyxatni tozalash</button>
+  <button class="btn-icon" aria-label="Roʻyxatdan olib tashlash">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
+  </button>
+</div>
+<div class="row">
+  <button class="btn-primary body" disabled>Boshlash</button>
+  <button class="btn-secondary body focused">Toʻxtatish</button>
+  <button class="btn-ghost body">Tanlanganini olib tashlash</button>
+</div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "v": 3,
+  "layout": "files",
+  "createdOnFiles": { "v": 1, "at": "2026-09-22T07:39:09Z" },
+  "title": "Eye Contact",
+  "namespace": "EyeContact",
+  "libraries": [],
+  "sections": {},
+  "groups": [],
+  "assetGroups": {},
+  "blobs": {},
+  "docs": { "readme": "project/README.md", "sections": [] },
+  "lastChange": {
+    "by": "Mebelix",
+    "via": "Claude (Cowork)",
+    "at": "2026-09-22T07:39:09Z",
+    "note": "First version: tokens, brand book and nine components built from TEXNIK_TOPSHIRIQ.md v2.0 (Eye Contact desktop app)."
+  }
+}

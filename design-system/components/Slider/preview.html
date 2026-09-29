@@ -1,0 +1,36 @@
+<!-- @dsCard group="Input" height=92 subtitle="Tuzatish kuchi, default 0.5" -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Slider — preview</title>
+<style>
+  html, body { margin:0; }
+  body { background:var(--surface-100); font-family:var(--font-sans); padding:var(--space-4); box-sizing:border-box; }
+  .field { max-width:340px; }
+  .head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:var(--space-2); }
+  .head .label { color:var(--ink-secondary); }
+  .head .stat { color:var(--accent); }
+  .track { position:relative; height:4px; border-radius:999px; background:var(--surface-400); }
+  .fill { position:absolute; left:0; top:0; height:100%; width:50%; border-radius:999px; background:var(--accent); }
+  .thumb { position:absolute; left:50%; top:50%; width:16px; height:16px; margin-left:-8px; margin-top:-8px; border-radius:999px; background:var(--accent); box-shadow: 0 0 0 2px var(--surface-100), var(--focus-ring); }
+  .ends { display:flex; justify-content:space-between; margin-top:var(--space-2); color:var(--ink-tertiary); }
+</style>
+</head>
+<body>
+<div class="field">
+  <div class="head">
+    <span class="label">Tuzatish kuchi</span>
+    <span class="stat">0.50</span>
+  </div>
+  <div class="track">
+    <div class="fill"></div>
+    <div class="thumb"></div>
+  </div>
+  <div class="ends caption">
+    <span>0 · qovoq saqlanadi</span>
+    <span>1 · kuchli tuzatish</span>
+  </div>
+</div>
+</body>
+</html>

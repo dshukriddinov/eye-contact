@@ -1,0 +1,34 @@
+<!-- @dsCard group="Status" height=110 subtitle="ishlanmoqda, toʻxtatildi, xato" -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ProgressBar — preview</title>
+<style>
+  html, body { margin:0; }
+  body { background:var(--surface-100); font-family:var(--font-sans); padding:var(--space-4); box-sizing:border-box; }
+  .block { max-width:420px; }
+  .block + .block { margin-top:var(--space-4); }
+  .stats { display:flex; justify-content:space-between; margin-bottom:var(--space-1); color:var(--ink-secondary); }
+  .track { height:6px; border-radius:999px; background:var(--surface-400); overflow:hidden; }
+  .fill { height:100%; border-radius:999px; transition:width .18s ease-out; }
+  .fill-processing { background:var(--accent); width:67%; }
+  .fill-stopped { background:var(--muted); width:41%; }
+  .fill-error { background:var(--danger); width:18%; }
+</style>
+</head>
+<body>
+<div class="block">
+  <div class="stats caption"><span>13 402 / 19 985 kadr</span><span class="stat">67 kadr/s · qolgan 2:14</span></div>
+  <div class="track"><div class="fill fill-processing"></div></div>
+</div>
+<div class="block">
+  <div class="stats caption"><span>8 194 / 19 985 kadr</span><span class="stat">toʻxtatildi</span></div>
+  <div class="track"><div class="fill fill-stopped"></div></div>
+</div>
+<div class="block">
+  <div class="stats caption"><span>3 601 / 19 985 kadr</span><span class="stat">xato</span></div>
+  <div class="track"><div class="fill fill-error"></div></div>
+</div>
+</body>
+</html>

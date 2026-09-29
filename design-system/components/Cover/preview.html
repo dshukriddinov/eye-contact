@@ -1,0 +1,62 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Eye Contact</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--surface-100); color:var(--ink); font-family:var(--font-sans); overflow:hidden; }
+  .cover { position:relative; height:288px; overflow:hidden; }
+  .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
+  .art svg { display:block; width:640px; height:288px; }
+  .b-ink { fill:var(--ink); }
+  .b-accent { fill:var(--accent); }
+  .b-success { fill:var(--success); }
+  .r-lg { rx:var(--radius-lg); }
+  .r-pill { rx:10px; }
+  .ring-tint { fill:none; stroke:var(--accent-subtle); stroke-width:6; }
+  .ring-ink { fill:none; stroke:var(--ink); stroke-width:6; }
+  .pupil { fill:var(--ink); }
+  .tick { stroke:var(--ink); stroke-width:4; stroke-linecap:round; }
+  .arc { fill:none; stroke:var(--accent-subtle); stroke-width:3; stroke-dasharray:2 6; stroke-linecap:round; }
+  .origin { fill:var(--accent-subtle); }
+  .words { position:absolute; left:var(--space-6); right:var(--space-6); bottom:var(--space-6); max-width:440px; }
+  .name { margin:0; font-size:84px; line-height:.95; font-weight:600; letter-spacing:-0.01em; color:var(--ink); }
+  .tag { margin:var(--space-2) 0 0; font-size:14px; line-height:20px; color:var(--ink-secondary); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 640 288" width="640" height="288">
+<!--
+  blocks      ink 168×248 bled off the top (identity, largest) · accent 248×224 flush to the bottom-right (the brand hue, carries the mark) · success 64×20 pill low-left (a state colour, kept small — it only ever means "tayyor") — ≈ 32% of 960×288
+  arrangement a tall ink slab with a larger accent slab overlapping its lower-right, bottoms near-aligned; the status pill grounds the pair at the seam
+  pattern     literal motif: the gaze target this app redirects toward — concentric iris rings, a viewfinder reticle and a short correction arc from an off-centre start into the pupil, over the accent block
+  scales      ring radii at space-2 steps (24 / 40 / 56 ≡ ×3 / ×5 / ×7); corners radius-lg on both slabs; the pill's rx is half its own height (10 of 20)
+-->
+<rect class="b-ink r-lg" x="40" y="-24" width="168" height="248"/>
+<rect class="b-accent r-lg" x="232" y="64" width="248" height="224"/>
+<rect class="b-success r-pill" x="64" y="248" width="64" height="20"/>
+<g>
+  <path class="arc" d="M285,232 Q255,165 342,180"/>
+  <circle class="origin" cx="285" cy="232" r="5"/>
+  <circle class="ring-tint" cx="350" cy="180" r="56"/>
+  <circle class="ring-ink" cx="350" cy="180" r="40"/>
+  <circle class="ring-tint" cx="350" cy="180" r="24"/>
+  <circle class="pupil" cx="350" cy="180" r="8"/>
+  <line class="tick" x1="350" y1="100" x2="350" y2="114"/>
+  <line class="tick" x1="350" y1="246" x2="350" y2="260"/>
+  <line class="tick" x1="270" y1="180" x2="284" y2="180"/>
+  <line class="tick" x1="416" y1="180" x2="430" y2="180"/>
+</g>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Eye<br>Contact</h1>
+<p class="tag">Faqat koʻz. Qolgani oʻzgarmaydi.</p>
+</div>
+</div>
+</body>
+</html>

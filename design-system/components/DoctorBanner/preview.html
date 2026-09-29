@@ -1,0 +1,40 @@
+<!-- @dsCard group="Status" height=170 subtitle="error (blocking), notice" -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>DoctorBanner — preview</title>
+<style>
+  html, body { margin:0; }
+  body { background:var(--surface-100); font-family:var(--font-sans); padding:var(--space-4); box-sizing:border-box; }
+  .banner { max-width:560px; display:flex; align-items:flex-start; gap:var(--space-2); padding:var(--space-3); border-radius:var(--radius-md); }
+  .banner + .banner { margin-top:var(--space-3); }
+  .banner svg { width:20px; height:20px; flex:none; margin-top:1px; }
+  .banner .text { flex:1; }
+  .banner .title { margin:0 0 2px; }
+  .banner .body-copy { color:var(--ink); }
+  .banner-error { background:var(--danger-subtle); }
+  .banner-error svg, .banner-error .title { color:var(--danger); }
+  .banner-notice { background:var(--surface-300); }
+  .banner-notice svg, .banner-notice .title { color:var(--ink-secondary); }
+  .fix { margin-left:auto; align-self:center; background:transparent; border:none; color:var(--ink-secondary); cursor:pointer; padding:var(--space-2) var(--space-2); border-radius:var(--radius-md); flex:none; }
+</style>
+</head>
+<body>
+<div class="banner banner-error">
+  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2 1 17h18L10 2Z"/><path d="M10 8v4M10 14.5v.01"/></svg>
+  <div class="text">
+    <div class="title body-strong">GPU drayveri eskirgan</div>
+    <div class="body-copy body">Drayver 591.0 kerak, topildi: 560.2. Yangilamaguncha Boshlash oʻchiq turadi.</div>
+  </div>
+  <button class="fix body">SDK_ornatish.bat</button>
+</div>
+<div class="banner banner-notice">
+  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6.5v.01"/></svg>
+  <div class="text">
+    <div class="title body-strong">Oʻzgaruvchan kadr tezligi</div>
+    <div class="body-copy body">Kirish VFR aniqlandi, doimiy 25 kadr/s ga oʻtkazildi.</div>
+  </div>
+</div>
+</body>
+</html>

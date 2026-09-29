@@ -1,0 +1,3 @@
+The window's top strip: queue actions on the left (`Video qoʻshish` `secondary`, `Tanlanganini olib tashlash` and `Roʻyxatni tozalash` `ghost`), the output destination on the right — a folder-path field (read-only text, `surface-300` fill, `folder` icon leading) plus a `secondary` browse button. Placeholder in `ink-tertiary`: "boʻsh boʻlsa video yonida" (9.1-boʻlim's own default), replaced by the real path in `body` the moment one is chosen.
+
+`space-4` padding, `space-3` gap between items in a group, `space-5` between the two groups; a single `border` rule underneath separates it from the queue. This strip never scrolls and never wraps — at a narrow window width the path field truncates from the left (keeping the folder name visible) before anything else gives way.

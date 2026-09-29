@@ -1,0 +1,7 @@
+A rectangular action with four variants — use the least insistent one that's still true. `primary` (`accent` fill, `on-accent` text) is for the one action that starts something: `Boshlash`. `secondary` (`surface-200` fill, `border-strong` outline, `ink` text) is for a control that changes what's on screen without starting a job: `Preview (30 s, yonma-yon)`, `Video qoʻshish`, `Natija papkasini ochish`. `ghost` (no fill, no border, `ink-secondary` text) is for a low-stakes list action: `Tanlanganini olib tashlash`, `Roʻyxatni tozalash`. `icon` is a square `secondary` with no label, for the row-level remove control.
+
+`Toʻxtatish` (Stop) is `secondary`, never `danger` — stopping is a normal, resumable action (the spec's own `--resume` design), not a destructive one; nothing in this window currently needs the `danger`-filled variant, so don't add one speculatively.
+
+States: hover steps the fill (`accent`→`accent-strong` on primary; `surface-200`→`surface-300` on secondary and ghost). Pressed holds that hover fill. Keyboard focus is the `focus-ring` shadow, on every variant including ghost. Disabled drops to `surface-400` fill (primary too — never a dimmed `accent`) with `ink-tertiary` text and no hover step; this is the state `Boshlash` takes while `doctor()` reports a blocking problem.
+
+Label in `body`; `space-2` vertical padding, `space-3` horizontal, `radius-md`, minimum 32px tall so it stays a comfortable target at any DPI scale.

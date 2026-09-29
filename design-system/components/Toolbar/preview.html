@@ -1,0 +1,36 @@
+<!-- @dsCard group="Layout" height=76 subtitle="queue actions + output folder" -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Toolbar — preview</title>
+<style>
+  html, body { margin:0; }
+  body { background:var(--surface-100); font-family:var(--font-sans); }
+  .bar { display:flex; align-items:center; justify-content:space-between; gap:var(--space-5); padding:var(--space-4); border-bottom:1px solid var(--border); }
+  .group { display:flex; align-items:center; gap:var(--space-3); }
+  button { appearance:none; border:none; cursor:pointer; border-radius:var(--radius-md); min-height:32px; padding:var(--space-2) var(--space-3); }
+  .btn-secondary { background:var(--surface-200); color:var(--ink); border:1px solid var(--border-strong); }
+  .btn-ghost { background:transparent; color:var(--ink-secondary); }
+  .path { display:flex; align-items:center; gap:var(--space-2); background:var(--surface-300); border-radius:var(--radius-md); padding:var(--space-2) var(--space-3); min-width:220px; color:var(--ink); }
+  .path svg { width:16px; height:16px; color:var(--ink-secondary); flex:none; }
+  .path span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:rtl; text-align:left; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="group">
+    <button class="btn-secondary body">Video qoʻshish</button>
+    <button class="btn-ghost body">Tanlanganini olib tashlash</button>
+    <button class="btn-ghost body">Roʻyxatni tozalash</button>
+  </div>
+  <div class="group">
+    <div class="path body">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 6a1 1 0 0 1 1-1h4l1.5 2H16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6Z"/></svg>
+      <span>&lrm;...\Videos\EyeContact\chiqish</span>
+    </div>
+    <button class="btn-secondary body">Koʻrib chiqish…</button>
+  </div>
+</div>
+</body>
+</html>
