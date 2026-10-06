@@ -10,3 +10,4 @@ out/
 gui_settings.json
 runtime/
 models/
+logs/

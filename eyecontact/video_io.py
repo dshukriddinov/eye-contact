@@ -42,19 +42,23 @@ def nvenc_ok(enc="h264_nvenc"):
 
 
 def probe(path):
-    out = subprocess.run([FFPROBE, "-v", "error", "-show_streams", "-show_format", "-of", "json", path],
-                         capture_output=True, text=True, check=True).stdout
-    d = json.loads(out)
+    r = subprocess.run([FFPROBE, "-v", "error", "-show_streams", "-show_format", "-of", "json", path],
+                       capture_output=True, text=True)
+    if r.returncode != 0 or not (r.stdout or "").strip():
+        # fayl yozilayotgan, band, buzilgan yoki formati noma'lum bo'lsa shu yerga tushadi
+        raise RuntimeError(f"ffprobe videoni o'qiy olmadi (kod {r.returncode}): {path}\n"
+                           f"{(r.stderr or '').strip()[:400] or 'ffprobe hech narsa qaytarmadi'}")
+    d = json.loads(r.stdout)
     v = next(s for s in d["streams"] if s["codec_type"] == "video")
     a = next((s for s in d["streams"] if s["codec_type"] == "audio"), None)
     fps = Fraction(v["r_frame_rate"])
     dur = float(d["format"].get("duration") or v.get("duration") or 0)
     nb = int(v.get("nb_frames") or 0)
     if not nb:  # MKV kabi konteynerlarda nb_frames yo'q: paketlarni sanaymiz
-        r = subprocess.run([FFPROBE, "-v", "error", "-count_packets", "-select_streams", "v:0",
+        c = subprocess.run([FFPROBE, "-v", "error", "-count_packets", "-select_streams", "v:0",
                             "-show_entries", "stream=nb_read_packets", "-of", "csv=p=0", path],
-                           capture_output=True, text=True, check=True)
-        nb = int(r.stdout.strip() or round(dur * fps))
+                           capture_output=True, text=True)
+        nb = int((c.stdout or "").strip() or round(dur * fps))
     rot = 0
     for sd in v.get("side_data_list", []):
         if "rotation" in sd:

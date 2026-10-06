@@ -779,6 +779,20 @@ def is_error(msg):
     return m.startswith(("XATO", "Tekshiruv XATO")) or m.lower().startswith("xato:")
 
 
+LOGFILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs", "gui.log")
+
+
+def write_logfile(text):
+    """Jurnal satrini diskka ham yozadi: xato chiqsa to'liq matn keyin ham qoladi. 2 MB dan oshsa yangidan boshlanadi."""
+    try:
+        os.makedirs(os.path.dirname(LOGFILE), exist_ok=True)
+        mode = "w" if os.path.exists(LOGFILE) and os.path.getsize(LOGFILE) > 2_000_000 else "a"
+        with open(LOGFILE, mode, encoding="utf-8") as f:
+            print(time.strftime("%Y-%m-%d %H:%M:%S ") + text, file=f)
+    except OSError:
+        pass
+
+
 class LogPanel(Panel):
     """LogPanel (Jurnal): heading sarlavha, surface-200, radius-lg, border. Qatorlar code (mono): [SS:DD:SS]
     ink-tertiary, xabar ink-secondary, XATO qatori to'liq danger. Qatorlar o'ralmaydi, uzuni "…" bilan qisqaradi,
@@ -812,6 +826,7 @@ class LogPanel(Panel):
         for part in msg.rstrip().splitlines() or [""]:
             self.lines.append((ts, part, err))
             self._insert(len(self.lines) - 1)
+            write_logfile(part)
         if at_end:
             self.text.see("end")
 

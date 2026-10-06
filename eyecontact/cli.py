@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import subprocess
 import sys
 import tempfile
 
@@ -58,7 +59,7 @@ def main(argv=None):
             rep["output"] = os.path.abspath(a.out)
         else:
             rep = pipeline.run(a.inp, a.out, cfg)
-    except (RuntimeError, OSError, SystemExit) as e:
+    except (RuntimeError, OSError, SystemExit, subprocess.SubprocessError, ValueError) as e:
         print(f"xato: {e}", file=sys.stderr)
         return 1
     rp = a.report or rep["output"] + ".report.json"  # chiqish nomi o'zgargan bo'lishi mumkin (.mov / .mkv)

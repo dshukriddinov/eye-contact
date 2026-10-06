@@ -93,6 +93,12 @@ ko'z atrofida). Qolgan hamma piksel bayt-aniq (lossless rejimda `mask_leak == 0`
 Tekshirish: `runtime\python\python.exe tests\test_smoke.py` (10 s klip, 3 chunk, mask_leak == 0, audio teng),
 `runtime\python\python.exe tests\test_gui.py` (UI odamsiz).
 
+## Muammo chiqsa
+
+Oynadagi jurnal `logs\gui.log` fayliga ham yoziladi (oxirgi 2 MB). Xato bo'lsa shu fayldagi oxirgi satrlarni qarang:
+ularda to'liq sabab bor. Masalan "ffprobe videoni o'qiy olmadi" degan xato fayl hali yozilayotgan, band yoki
+formati qo'llanmaydigan bo'lsa chiqadi.
+
 ## Cheklovlar
 
 - 10-bit/HDR yo'q. Bosh 30°/20° dan ko'p burilsa yoki ko'z yumuq bo'lsa Maxine tuzatmaydi (original qoladi).
