@@ -19,7 +19,7 @@ OUT = os.path.join(HERE, "_smoke_out.mkv")
 
 def audio_md5(path):
     r = subprocess.run([video_io.FFMPEG, "-v", "error", "-i", path, "-map", "0:a:0", "-c", "copy", "-f", "md5", "-"],
-                       capture_output=True, text=True, check=True)
+                       capture_output=True, encoding="utf-8", errors="replace", check=True)
     return r.stdout.strip()
 
 

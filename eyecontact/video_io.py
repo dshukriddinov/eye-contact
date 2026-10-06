@@ -36,14 +36,16 @@ def nvenc_ok(enc="h264_nvenc"):
     if enc not in _NVENC_OK:
         r = subprocess.run([FFMPEG, "-v", "error", "-nostdin", "-f", "lavfi", "-i",
                             "color=c=gray:s=256x256:r=25:d=0.04", "-c:v", enc, "-f", "null", "-"],
-                           capture_output=True, text=True)
+                           capture_output=True, encoding="utf-8", errors="replace")
         _NVENC_OK[enc] = r.returncode == 0 and "nvenc" not in r.stderr.lower()
     return _NVENC_OK[enc]
 
 
 def probe(path):
+    # encoding="utf-8": text=True locale kodlagichini oladi (cp1251). Metadata bayti dekod qilinmasa Windows'da
+    # o'qish thread'i uziladi, stdout None bo'lib qaytadi (kod 0) va xato tushunarsiz bo'ladi.
     r = subprocess.run([FFPROBE, "-v", "error", "-show_streams", "-show_format", "-of", "json", path],
-                       capture_output=True, text=True)
+                       capture_output=True, encoding="utf-8", errors="replace")
     if r.returncode != 0 or not (r.stdout or "").strip():
         # fayl yozilayotgan, band, buzilgan yoki formati noma'lum bo'lsa shu yerga tushadi
         raise RuntimeError(f"ffprobe videoni o'qiy olmadi (kod {r.returncode}): {path}\n"
@@ -57,7 +59,7 @@ def probe(path):
     if not nb:  # MKV kabi konteynerlarda nb_frames yo'q: paketlarni sanaymiz
         c = subprocess.run([FFPROBE, "-v", "error", "-count_packets", "-select_streams", "v:0",
                             "-show_entries", "stream=nb_read_packets", "-of", "csv=p=0", path],
-                           capture_output=True, text=True)
+                           capture_output=True, encoding="utf-8", errors="replace")
         nb = int((c.stdout or "").strip() or round(dur * fps))
     rot = 0
     for sd in v.get("side_data_list", []):

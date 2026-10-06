@@ -43,7 +43,7 @@ INFO = {"gaze_success": (">=", 0.90)}  # hisobotda, verdictga kirmaydi
 
 def audio_md5(path):
     r = subprocess.run([video_io.FFMPEG, "-v", "error", "-i", path, "-map", "0:a:0?", "-c", "copy", "-f", "md5", "-"],
-                       capture_output=True, text=True)
+                       capture_output=True, encoding="utf-8", errors="replace")
     return r.stdout.strip()
 
 

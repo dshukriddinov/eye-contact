@@ -45,7 +45,7 @@ def gpu_info():
     import re
     try:
         out = subprocess.run(["nvidia-smi", "--query-gpu=name,driver_version", "--format=csv,noheader"],
-                             capture_output=True, text=True, timeout=15, creationflags=NO_WINDOW).stdout
+                             capture_output=True, encoding="utf-8", errors="replace", timeout=15, creationflags=NO_WINDOW).stdout
         name, drv = [s.strip() for s in out.splitlines()[0].split(",")[:2]]
         return name, float(re.match(r"[\d.]+", drv).group(0))
     except Exception:
@@ -124,7 +124,7 @@ def describe(path):
         from .video_io import FFPROBE
         out = subprocess.run([FFPROBE, "-v", "error", "-select_streams", "v:0", "-show_entries",
                               "stream=width,height:format=duration", "-of", "json", path],
-                             capture_output=True, text=True, timeout=30, creationflags=NO_WINDOW).stdout
+                             capture_output=True, encoding="utf-8", errors="replace", timeout=30, creationflags=NO_WINDOW).stdout
         d = json.loads(out or "{}")
         st = (d.get("streams") or [{}])[0]
         if st.get("width"):
