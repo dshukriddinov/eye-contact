@@ -77,7 +77,8 @@ runtime\python\python.exe -m eyecontact.cli --help
 | `--max-head-yaw/-pitch`, `--max-gaze` | 30/20/30 | bundan tashqarida Maxine tuzatmaydi (gisterezis) |
 
 Chiqish: video qayta kodlangan (NVENC, bo'lmasa CPU x264), audio `-c:a copy` (bayt-aniq), rang teglari saqlanadi,
-`OUT.report.json` (har kadr uchun gaze/head/conf/box). PCM audio MP4 ichida ko'p playerda ovozsiz, shuning uchun `.mov`.
+natija yonida ortiqcha fayl qoldirilmaydi. PCM audio MP4 ichida ko'p playerda ovozsiz, shuning uchun `.mov`.
+Kadr-kadr hisobot kerak bo'lsa (gaze/head/conf/box): `--report OUT.report.json`.
 
 ## Qanday ishlaydi
 

@@ -20,7 +20,8 @@ def main(argv=None):
     ap.add_argument("--bitrate", type=int, metavar="BPS", help="video bitrate; default kirish x1.5; 0 -> --cq")
     ap.add_argument("--cq", type=int, default=18, help="NVENC cq / x264 crf, --bitrate 0 bo'lsa (default 18)")
     ap.add_argument("--lossless", action="store_true", help="FFV1/MKV, eval uchun")
-    ap.add_argument("--report", metavar="PATH", help="default OUT.report.json")
+    ap.add_argument("--report", metavar="PATH",
+                    help="kadr-kadr hisobotni shu faylga yozish (default: hisobot yozilmaydi)")
     ap.add_argument("--workdir", metavar="PATH", help="vaqtinchalik chunk papka (default OUT.work)")
     ap.add_argument("--keep-work", action="store_true")
     ap.add_argument("--blend", choices=("lid", "box"), default="lid",
@@ -62,13 +63,13 @@ def main(argv=None):
     except (RuntimeError, OSError, SystemExit, subprocess.SubprocessError, ValueError) as e:
         print(f"xato: {e}", file=sys.stderr)
         return 1
-    rp = a.report or rep["output"] + ".report.json"  # chiqish nomi o'zgargan bo'lishi mumkin (.mov / .mkv)
-    with open(rp, "w", encoding="utf-8") as f:
-        json.dump(rep, f, ensure_ascii=False)
+    if a.report:  # hisobot faqat so'ralganda (tools/eval.py uchun); natija yonida ortiqcha fayl qolmaydi
+        with open(a.report, "w", encoding="utf-8") as f:
+            json.dump(rep, f, ensure_ascii=False)
     if not a.quiet:
         print(f"tayyor: {rep['frames_total']} kadr, {rep['frames_changed']} tuzatilgan, "
-              f"{rep['frames_skipped']} o'tkazilgan, {rep['seconds']} s ({rep['fps']} fps). hisobot: {rp}",
-              file=sys.stderr)
+              f"{rep['frames_skipped']} o'tkazilgan, {rep['seconds']} s ({rep['fps']} fps)"
+              + (f". hisobot: {a.report}" if a.report else ""), file=sys.stderr)
     if a.progress:
         print(f"OUTPUT {rep['output']}", file=sys.stderr, flush=True)
     return 0
