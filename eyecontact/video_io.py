@@ -85,6 +85,7 @@ def probe(path):
         "vfr": vfr,
         "audio_codec": a["codec_name"] if a else None,
         "audio_start_time": float(a.get("start_time") or 0.0) if a else None,
+        "format_start_time": float(d["format"].get("start_time") or 0.0),
     }
 
 
@@ -233,21 +234,20 @@ class FrameWriter:
         self.close()
 
 
-def concat(segments, out, audio_from=None, workdir=None, av_offset=0.0):
+def concat(segments, out, audio_from=None, workdir=None, video_offset=0.0):
     """Segmentlarni stream-copy bilan birlashtiradi, audio kirishdan copy.
-    av_offset: kirishdagi video start_time - audio start_time (s). Segmentlar 0 dan boshlanadi, farq -itsoffset
-    bilan qaytariladi (aks holda ikkalasi 0 dan boshlanib lab-sync siljiydi, EC-1)."""
+    video_offset (EC-1): kirishdagi video start_time - fayl (format) start_time, s. ffmpeg audio kirishni fayl
+    boshiga nisbatan siljitadi (audio = a_start - f_start), segmentlar esa 0 dan boshlanadi. Video shu qiymatga
+    surilsa (video - audio) farqi kirishdagidek qoladi. f_start = eng kichik stream boshi, shuning uchun >= 0."""
     lst = os.path.join(workdir or os.path.dirname(segments[0]), "concat.txt")
     with open(lst, "w", encoding="utf-8") as f:
         for s in segments:
             f.write(f"file '{os.path.basename(s)}'\n")
     cmd = [FFMPEG, "-v", "error", "-nostdin", "-y"]
-    if audio_from and av_offset > 0:
-        cmd += ["-itsoffset", f"{av_offset:.6f}"]
+    if audio_from and video_offset > 0:
+        cmd += ["-itsoffset", f"{video_offset:.6f}"]
     cmd += ["-f", "concat", "-safe", "0", "-i", os.path.basename(lst)]
     if audio_from:
-        if av_offset < 0:
-            cmd += ["-itsoffset", f"{-av_offset:.6f}"]
         cmd += ["-i", os.path.abspath(audio_from), "-map", "0:v:0", "-map", "1:a:0?", "-c:a", "copy"]
     cmd += ["-c:v", "copy"]
     if out.lower().endswith((".mp4", ".mov")):

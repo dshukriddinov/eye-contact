@@ -52,15 +52,17 @@ def av_offset_ms(path):
 
 
 @pytest.mark.parametrize("lossless", [True, False])
-def test_av_offset_preserved(media, tmp_path, monkeypatch, lossless):
-    """EC-1: kirishda video audiodan 52 ms keyin boshlanadi -> chiqishda ham (±1 kadr = 40 ms, amalda ~0)."""
+@pytest.mark.parametrize("clip, expected", [("offset.mov", 52), ("offset_both.mov", 0)])
+def test_av_offset_preserved(media, tmp_path, monkeypatch, lossless, clip, expected):
+    """EC-1: (video - audio) start_time farqi chiqishda saqlanadi (chegara ±1 kadr = 40 ms, amalda ~0).
+    offset.mov: video 52 ms kech. offset_both.mov: ikkalasi 80 ms dan, fayl boshi 0 (clip_10s kabi)."""
     stub_maxine.install(monkeypatch, modify=True)
-    src = media["offset.mov"]
-    assert av_offset_ms(src) == pytest.approx(52, abs=0.5)
+    src = media[clip]
+    assert av_offset_ms(src) == pytest.approx(expected, abs=0.5)
     rep = pipeline.run(src, str(tmp_path / ("out.mkv" if lossless else "out.mp4")),
                        pipeline.Config(chunk_sec=4, lossless=lossless, quiet=True))
     got = av_offset_ms(rep["output"])
-    assert got == pytest.approx(52, abs=2)
+    assert got == pytest.approx(expected, abs=2)
     from tools import eval as ev
     assert abs(ev.av_offset_ms(video_io.probe(src), video_io.probe(rep["output"]))) < 2
 

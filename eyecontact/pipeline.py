@@ -405,8 +405,8 @@ def run(inp, out, cfg, max_frames=None):
             json.dump(pmeta, f, ensure_ascii=False, indent=1)
         os.replace(os.path.join(out, "meta.json.tmp"), os.path.join(out, "meta.json"))
     else:
-        av_offset = meta["start_time"] - meta["audio_start_time"] if meta["audio_codec"] else 0.0
-        video_io.concat(segments, out, audio_from=inp, workdir=workdir, av_offset=av_offset)
+        video_io.concat(segments, out, audio_from=inp, workdir=workdir,
+                        video_offset=meta["start_time"] - meta["format_start_time"])
     per = {k: sum((r[k] for r in chunk_recs), []) for k in ("gaze_yaw", "gaze_pitch", "head_yaw", "head_pitch",
                                                             "conf", "changed", "box")}
     n = len(per["changed"])
