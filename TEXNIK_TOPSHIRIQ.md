@@ -244,7 +244,26 @@ Faqat o'zgargan piksellar yoziladi (IP-2).
 **Chunk va resume.** Chunk 120 s (25 kadr/s da 3000 kadr). Kadrga aniq seek:
 `-ss = stream start_time + (start − 0.5) / fps` va `-frames:v`. Har chunk alohida segment bo'lib kodlanadi va JSON
 checkpoint yoziladi. `--resume` segmentni faqat JSON dagi sozlamalar kaliti joriy sozlamalarga teng bo'lsa qayta
-ishlatadi. Oxirida segmentlar `-c copy` bilan birlashtiriladi, audio kirishdan nusxalanadi, vaqtinchalik papka o'chiriladi.
+ishlatadi. Kalitga kirish fayli identifikatori ham kiradi (hajm, `mtime_ns`, boshidagi va oxiridagi 1 MB ning
+xxhash64'i, EC-3): bir xil nomli boshqa video bilan eski chunklar ishlatilmaydi. Oxirida segmentlar `-c copy` bilan
+birlashtiriladi, audio kirishdan nusxalanadi, vaqtinchalik papka o'chiriladi. Concat'da video
+`video start_time − fayl start_time` ga suriladi (`-itsoffset`), chunki ffmpeg audioni fayl boshiga nisbatan siljitadi,
+segmentlar esa 0 dan boshlanadi: (video − audio) farqi kirishdagidek qoladi (EC-1).
+
+**VFR (EC-2).** Kadr soni `round(video davomiyligi × fps)`. VFR'da kadrlar `-copyts` + `fps` filtri + `trim=start_pts`
+bilan o'qiladi: kadr to'ri butun fayl uchun absolyut vaqtda bir xil, chunk chegarasida siljish yo'q. Seek 1 s
+oldinroqdan, tushgan kadr o'rnini oldingisi to'ldiradi. Natija butun faylni `fps` filtri bilan o'qilgan ideal CFR
+ketma-ketlik bilan kadrma-kadr teng.
+
+### 7.6 Patch rejimi (`--patches-out`, EC-4, Dars Studio uchun)
+
+Video kodlanmaydi. Har chunk uchun `DIR/chunk_XXXXX.npz` (zlib) va `chunk_XXXXX.json` (checkpoint, resume), oxirida
+`DIR/meta.json`: format versiyasi, `source_id` (kirish fayli identifikatori), o'lcham, fps, `pix_fmt` (yuv420p),
+rang matritsasi va diapazon, `cfg_key`, chunklar ro'yxati. npz ichida har patchli kadr uchun: `frame_idx`, `box`
+(x0, y0, x1, y1), bitpack `y_mask`/`uv_mask` (faqat baytlari o'zgargan piksellar), `y_data`, `uv_data` (U keyin V),
+`offsets`, `size`. `eyecontact/patches.py`: `write_chunk`, `read_chunk`, `apply(frame_yuv, rec, w)`:
+`out = orig + w·(patch − orig)` maska ichida; `w = 1` da oddiy rejim chiqishi bilan bayt-aniq (Y va UV, stub testida
+360 kadrda tekshirilgan). Hajm: 10 s 1080p25 klipda 384 KB (25 min ≈ 56 MB).
 
 ### 7.5 Maxine sozlamalari
 
@@ -269,7 +288,7 @@ SDK hujjatida teskari yozilgan.
 Kirish:
 - Konteyner MP4, MOV, MKV; kodek H.264, H.265, ProRes (ffmpeg dekodlay oladigan har qanday). Sinovdan o'tgani: H.264 MOV.
 - 8-bit 4:2:0. Boshqa piksel formati bo'lsa xato bilan to'xtaydi.
-- O'zgaruvchan kadr tezligi (VFR) doimiyga o'tkaziladi, ogohlantirish chiqadi (sinovdan o'tmagan).
+- O'zgaruvchan kadr tezligi (VFR) doimiyga o'tkaziladi, ogohlantirish chiqadi (7.4, sintetik VFR testida tekshirilgan).
 - Rotation metadata hisobga olinadi.
 
 Chiqish:
@@ -322,6 +341,7 @@ runtime\python\python.exe -m eyecontact.cli IN OUT [opsiyalar]
 | `--lossless` | — | FFV1/MKV |
 | `--chunk-sec` | 120 | Chunk uzunligi |
 | `--resume` | — | Tayyor chunklarni qayta ishlamaydi |
+| `--patches-out DIR` | — | Video o'rniga ko'z patchlari (7.6); `OUT` kerak emas |
 | `--preview SEC` | — | Birinchi SEC soniya, yonma-yon |
 | `--workdir`, `--keep-work` | `OUT.work` | Vaqtinchalik segmentlar |
 | `--report PATH` | `OUT.report.json` | Hisobot yo'li |
@@ -513,6 +533,7 @@ v1.0 dagi `face.py`, `smooth.py`, `gaze.py`, `blend.py`, `make_preview.py` quril
 | 2026-09-18 | UI (tkinter), o'rnatuvchi | Odamsiz UI testi o'tdi |
 | 2026-09-22 | Tozalash, portativ paket, `doctor()`, `SDK_ornatish.bat` | 1.9 GB, o'rnatishsiz ishlaydi |
 | 2026-09-22 | IP-2 tuzatishi, VRAM/RAM o'lchovi, shu hujjat | O'zgarmagan piksellar bayt-aniq |
+| 2026-10-26 | Dars Studio uchun EC-1..EC-5 (`studio-ec` branch) | GPU'siz stub testlari (11), A/V siljish, VFR, resume kaliti, `--patches-out` |
 
 ### 13.2 Qabul qilingan qarorlar
 
@@ -547,6 +568,10 @@ v1.0 dagi `face.py`, `smooth.py`, `gaze.py`, `blend.py`, `make_preview.py` quril
 | 14 | Portativ Python'ga paket o'rnatilmadi | `EXTERNALLY-MANAGED` belgisi | Belgi olib tashlandi |
 | 15 | `nvARPose.dll` yuklanmadi | Qisqartirilgan SDK da `cufft64_11.dll` yo'q edi | `cufft64_11.dll` qaytarildi |
 | 16 | UI drayverni "592" deb ko'rsatgan | Yaxlitlash | Aniq qiymat (591.86) |
+| 17 | Chiqishda video va audio boshlanishi farqi yo'qolgan: 52 ms siljishli MOV'da 0 ga, `clip_10s` da (ikkalasi 0.08 s) video 0.00 / audio 0.08, ya'ni ovoz 80 ms kech | Segmentlar 0 dan boshlanadi, audio fayl boshiga nisbatan copy qilinadi | Video `-itsoffset` = video start − fayl start (EC-1); `eval.py` da `av_offset_ms` |
+| 18 | VFR klipda (6 kadr tushgan) chiqish 0.2 s qisqa, chunkdan keyin 1 kadr siljish | Kadr soni paketlardan; `-fps_mode cfr` to'rni seek nuqtasidan quradi | `round(davomiylik × fps)`; `-copyts` + `fps` filtri (EC-2) |
+| 19 | Shu nomli boshqa video bilan `--resume` eski chunklarni qo'shib yuborishi mumkin | `cfg_key` faqat sozlamalardan | Kalitga fayl identifikatori (EC-3) |
+| 20 | Maxine bir xil kirishda ikki marta ishga tushirilganda lossless chiqish farq qiladi: max 3, 250 kadrda ~870 bayt | GPU inference (temporal filtr) bit-aniq emas | Qaror "piksel ±1" amalda ±3; regressiya shu shovqin bilan solishtiriladi |
 
 Ochiq xavflar: 4K da sifat va tezlik, boshqa GPU avlodlari, ko'zoynaksiz va katta yuzli videolar (16-bo'lim).
 
