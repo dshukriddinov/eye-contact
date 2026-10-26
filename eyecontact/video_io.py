@@ -61,6 +61,12 @@ def probe(path):
                             "-show_entries", "stream=nb_read_packets", "-of", "csv=p=0", path],
                            capture_output=True, encoding="utf-8", errors="replace")
         nb = int((c.stdout or "").strip() or round(dur * fps))
+    vfr = v.get("r_frame_rate") != v.get("avg_frame_rate")
+    if vfr:
+        # EC-2: paketlar soni tushgan kadrlarni hisobga olmaydi (294 != 299). FrameReader(cfr=True) butun video
+        # davomiyligini fps to'rida qoplaydi, shuning uchun kadr soni = round(video davomiyligi x fps).
+        # Video stream davomiyligi (format davomiyligi uzunroq audioni ham o'z ichiga oladi).
+        nb = round(float(v.get("duration") or dur) * fps)
     rot = 0
     for sd in v.get("side_data_list", []):
         if "rotation" in sd:
@@ -75,7 +81,7 @@ def probe(path):
         "bit_rate": int(v.get("bit_rate") or d["format"].get("bit_rate") or 0),
         "color_range": v.get("color_range"), "color_space": v.get("color_space"),
         "color_primaries": v.get("color_primaries"), "color_trc": v.get("color_trc"),
-        "vfr": v.get("r_frame_rate") != v.get("avg_frame_rate"),
+        "vfr": vfr,
         "audio_codec": a["codec_name"] if a else None,
         "audio_start_time": float(a.get("start_time") or 0.0) if a else None,
     }
@@ -112,7 +118,17 @@ class FrameReader:
         self.w, self.h, self.pix_fmt = width, height, pix_fmt
         self.frame_bytes = frame_bytes(width, height, pix_fmt)
         cmd = [FFMPEG, "-v", "error", "-nostdin"]
-        if start:
+        vf = []
+        if cfr:
+            # EC-2 (VFR): -fps_mode cfr kadr to'rini seek nuqtasidan quradi, chunk chegarasida 1 kadr siljish
+            # bo'ladi. Shuning uchun -copyts (absolyut vaqt) + fps filtri: to'r butun fayl uchun bir xil, kadr i
+            # = slot round(start_time x fps) + i. 1 s oldinroqdan o'qiladi: tushgan kadr o'rnini oldingisi to'ldirsin.
+            if start:
+                cmd += ["-ss", f"{max(0.0, start_time + float(start / fps) - 1.0):.6f}"]
+            cmd += ["-copyts"]
+            first = start + round(Fraction(start_time).limit_denominator(1_000_000) * fps)
+            vf += [f"fps={fps}:round=near", f"trim=start_pts={first}"]
+        elif start:
             # -ss mutlaq stream vaqti: stream start_time + (start - 0.5) kadr -> aynan `start` kadrdan boshlanadi
             cmd += ["-ss", f"{start_time + float((start - Fraction(1, 2)) / fps):.6f}"]
         cmd += ["-i", path]
@@ -120,8 +136,10 @@ class FrameReader:
             cmd += ["-frames:v", str(count)]
         rng = "pc" if full else "tv"
         if pix_fmt == "bgr24":
-            cmd += ["-vf", f"scale=in_color_matrix={matrix}:in_range={rng}:out_range=pc"]
-        cmd += ["-fps_mode", "cfr" if cfr else "passthrough", "-f", "rawvideo", "-pix_fmt", pix_fmt, "-"]
+            vf.append(f"scale=in_color_matrix={matrix}:in_range={rng}:out_range=pc")
+        if vf:
+            cmd += ["-vf", ",".join(vf)]
+        cmd += ["-fps_mode", "passthrough", "-f", "rawvideo", "-pix_fmt", pix_fmt, "-"]
         self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=self.frame_bytes * 4)
 
     def read(self):

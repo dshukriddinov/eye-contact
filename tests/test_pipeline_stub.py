@@ -63,3 +63,33 @@ def test_av_offset_preserved(media, tmp_path, monkeypatch, lossless):
     assert got == pytest.approx(52, abs=2)
     from tools import eval as ev
     assert abs(ev.av_offset_ms(video_io.probe(src), video_io.probe(rep["output"]))) < 2
+
+
+def framemd5(path, vf=None):
+    """Kadrlar md5 ro'yxati (yuv420p). vf berilsa butun fayl shu filtr bilan (seek'siz) dekod qilinadi."""
+    import subprocess
+    cmd = [video_io.FFMPEG, "-v", "error", "-i", path, "-map", "0:v:0"]
+    if vf:
+        cmd += ["-vf", vf]
+    cmd += ["-pix_fmt", "yuv420p", "-f", "framemd5", "-"]
+    out = subprocess.run(cmd, capture_output=True, encoding="utf-8", errors="replace", check=True).stdout
+    return [ln.rsplit(",", 1)[1].strip() for ln in out.splitlines() if ln and not ln.startswith("#")]
+
+
+@pytest.mark.parametrize("chunk_sec", [4, 3.96])  # 3.96 s = 99 kadr: chunk aynan tushgan kadrdan boshlanadi
+def test_vfr_matches_ideal_cfr(media, tmp_path, monkeypatch, chunk_sec):
+    """EC-2: 6 kadri tushgan VFR (294 kadr, 11.96 s) -> CFR 299 kadr; har kadr butun faylni fps filtri bilan
+    o'qilgan ideal CFR ketma-ketlik bilan bir xil (chunk chegarasida siljish yo'q)."""
+    stub_maxine.install(monkeypatch, modify=False)
+    src = media["vfr.mp4"]
+    m = video_io.probe(src)
+    assert m["vfr"] and m["nb_frames"] == 299
+    ideal = framemd5(src, vf="fps=25")
+    assert len(ideal) == 299
+    rep = pipeline.run(src, str(tmp_path / "out.mkv"),
+                       pipeline.Config(chunk_sec=chunk_sec, lossless=True, quiet=True))
+    got = framemd5(rep["output"])
+    assert len(got) == 299
+    bad = [i for i, (a, b) in enumerate(zip(ideal, got)) if a != b]
+    assert not bad, f"farqli kadrlar: {bad[:10]}"
+    assert abs(video_io.probe(rep["output"])["duration"] - m["duration"]) * 25 <= 1

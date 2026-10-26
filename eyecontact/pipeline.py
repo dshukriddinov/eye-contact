@@ -317,7 +317,8 @@ def run(inp, out, cfg, max_frames=None):
     if meta["pix_fmt"] not in SUPPORTED_PIX:
         raise SystemExit(f"xato: pix_fmt {meta['pix_fmt']} qo'llanmaydi (faqat 8-bit 4:2:0: {SUPPORTED_PIX})")
     if meta["vfr"]:
-        log("ogohlantirish: o'zgaruvchan fps (VFR), CFR ga o'tkaziladi; kadr soni farq qilishi mumkin", cfg.quiet)
+        log(f"ogohlantirish: o'zgaruvchan fps (VFR), CFR ga o'tkaziladi: {meta['nb_frames']} kadr "
+            f"(davomiylik x fps); tushgan kadrlar o'rnini oldingi kadr to'ldiradi", cfg.quiet)
     if cfg.lossless and not out.lower().endswith(".mkv"):
         out += ".mkv"
         log(f"ogohlantirish: lossless FFV1 -> MKV: {out}", cfg.quiet)
