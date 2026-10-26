@@ -119,3 +119,42 @@ def test_resume_ignores_chunks_of_other_file(media, tmp_path, monkeypatch):
     pipeline.run(inp, out, cfg())
     assert len(calls) == 3
     assert framemd5(out) == framemd5(inp)
+
+
+def test_patches_out_equals_full_output(media, tmp_path, monkeypatch):
+    """EC-4: --patches-out patchlari kirish kadrlariga qo'llanganda oddiy rejim (lossless) chiqishi bilan bayt-aniq
+    (Y va UV); resume ishlaydi; w=0 -> o'zgarishsiz."""
+    import json
+    import os
+
+    from eyecontact import cli, patches
+    stub_maxine.install(monkeypatch, modify=True)
+    src, pdir = media["ntsc.mp4"], str(tmp_path / "eyepatch")
+    full = pipeline.run(src, str(tmp_path / "full.mkv"), pipeline.Config(chunk_sec=4, lossless=True, quiet=True))
+    assert cli.main([src, "--patches-out", pdir, "--chunk-sec", "4", "-q"]) == 0
+
+    with open(os.path.join(pdir, "meta.json"), encoding="utf-8") as f:
+        meta = json.load(f)
+    assert meta["format_version"] == patches.FORMAT_VERSION and meta["nb_frames"] == 360
+    assert meta["source_id"] == video_io.file_id(src)
+    assert [c["file"] for c in meta["chunks"]] == ["chunk_00000.npz", "chunk_00001.npz", "chunk_00002.npz"]
+    recs = {r["frame_idx"]: r for c in meta["chunks"] for r in patches.read_chunk(os.path.join(pdir, c["file"]))}
+    assert len(recs) == 360
+
+    m = video_io.probe(src)
+    w, h = m["width"], m["height"]
+    ra = video_io.FrameReader(src, w, h, m["fps"], pix_fmt="yuv420p")
+    rb = video_io.FrameReader(full["output"], w, h, m["fps"], pix_fmt="yuv420p")
+    for i, (fa, fb) in enumerate(zip(ra, rb)):
+        orig = fa.copy()
+        assert (patches.apply(fa.copy(), recs[i], w=0.0) == orig).all()
+        half = patches.apply(fa.copy(), recs[i], w=0.5)
+        assert (half != orig).any() and (half != fb).any()
+        assert (patches.apply(fa, recs[i]) == fb).all(), f"kadr {i}"
+    assert i == 359
+
+    calls = []
+    orig_pc = pipeline.process_chunk
+    monkeypatch.setattr(pipeline, "process_chunk", lambda *a, **k: calls.append(1) or orig_pc(*a, **k))
+    assert cli.main([src, "--patches-out", pdir, "--chunk-sec", "4", "-q", "--resume"]) == 0
+    assert calls == []
