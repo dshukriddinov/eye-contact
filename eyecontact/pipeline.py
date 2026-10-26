@@ -231,12 +231,13 @@ class Config:
         self.max_gaze = 30.0
         self.quiet = False
         self.on_progress = None    # callable(done_frames, total_frames), UI uchun
+        self.input_id = None       # run() to'ldiradi: video_io.file_id(kirish) (EC-3)
         self.__dict__.update(kw)
 
     def key(self):
         """Natijaga ta'sir qiladigan sozlamalar. Resume faqat shu kalit bir xil bo'lgan chunklarni qayta ishlatadi."""
-        names = ("chunk_sec", "codec", "bitrate", "cq", "lossless", "eye_size", "blend", "lid_open", "iris_tone",
-                 "upscale", "temporal", "max_head_yaw", "max_head_pitch", "max_gaze")
+        names = ("input_id", "chunk_sec", "codec", "bitrate", "cq", "lossless", "eye_size", "blend", "lid_open",
+                 "iris_tone", "upscale", "temporal", "max_head_yaw", "max_head_pitch", "max_gaze")
         return "|".join(f"{n}={getattr(self, n)}" for n in names)
 
 
@@ -329,6 +330,7 @@ def run(inp, out, cfg, max_frames=None):
     w, h, fps = meta["width"], meta["height"], meta["fps"]
     total = meta["nb_frames"] if max_frames is None else min(meta["nb_frames"], max_frames)
     cfg.total_frames = total
+    cfg.input_id = video_io.file_id(inp)   # resume kaliti: boshqa fayl bilan eski chunk'lar ishlatilmasin
     log(f"kirish: {w}x{h} @ {fps} fps, {total} kadr, {meta['codec']} {meta['pix_fmt']} "
         f"{meta['bit_rate'] // 1000} kbps, audio {meta['audio_codec']}", cfg.quiet)
     color = {k: meta[k] for k in ("color_range", "color_space", "color_primaries", "color_trc")}

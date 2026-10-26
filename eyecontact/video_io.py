@@ -7,6 +7,7 @@ import subprocess
 from fractions import Fraction
 
 import numpy as np
+import xxhash
 
 
 _RUNTIME_FFMPEG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "runtime", "ffmpeg")
@@ -85,6 +86,17 @@ def probe(path):
         "audio_codec": a["codec_name"] if a else None,
         "audio_start_time": float(a.get("start_time") or 0.0) if a else None,
     }
+
+
+def file_id(path, block=1 << 20):
+    """Fayl identifikatori (EC-3): hajm, mtime_ns, boshidagi va oxiridagi 1 MB ning xxhash64'i.
+    Butun faylni o'qimaydi (25 min video ~4 GB), lekin boshqa fayl yoki qayta yozilgan faylni ajratadi."""
+    st = os.stat(path)
+    with open(path, "rb") as f:
+        head = xxhash.xxh64_hexdigest(f.read(block))
+        f.seek(max(0, st.st_size - block))
+        tail = xxhash.xxh64_hexdigest(f.read(block))
+    return f"{st.st_size}-{st.st_mtime_ns}-{head}-{tail}"
 
 
 def safe_container(out, audio_codec):

@@ -93,3 +93,29 @@ def test_vfr_matches_ideal_cfr(media, tmp_path, monkeypatch, chunk_sec):
     bad = [i for i, (a, b) in enumerate(zip(ideal, got)) if a != b]
     assert not bad, f"farqli kadrlar: {bad[:10]}"
     assert abs(video_io.probe(rep["output"])["duration"] - m["duration"]) * 25 <= 1
+
+
+def test_resume_ignores_chunks_of_other_file(media, tmp_path, monkeypatch):
+    """EC-3: shu nomli boshqa fayl bilan --resume eski chunk'larni ishlatmaydi; o'sha fayl bilan ishlatadi."""
+    import shutil
+    import subprocess
+    stub_maxine.install(monkeypatch, modify=False)
+    calls = []
+    orig = pipeline.process_chunk
+    monkeypatch.setattr(pipeline, "process_chunk", lambda *a, **k: calls.append(a[3]) or orig(*a, **k))
+    inp, out, work = str(tmp_path / "dars.mp4"), str(tmp_path / "out.mkv"), str(tmp_path / "work")
+    cfg = lambda: pipeline.Config(chunk_sec=4, lossless=True, quiet=True, resume=True, keep_work=True, workdir=work)
+
+    shutil.copy(media["ntsc.mp4"], inp)
+    pipeline.run(inp, out, cfg())
+    assert len(calls) == 3
+    calls.clear()
+    pipeline.run(inp, out, cfg())                      # o'sha fayl: hammasi resume
+    assert calls == []
+
+    # o'sha nom, o'sha o'lcham/fps/kadr soni, boshqa tarkib
+    subprocess.run([video_io.FFMPEG, "-v", "error", "-y", "-i", media["ntsc.mp4"], "-vf", "negate", "-c:a", "copy",
+                    inp], check=True)
+    pipeline.run(inp, out, cfg())
+    assert len(calls) == 3
+    assert framemd5(out) == framemd5(inp)
