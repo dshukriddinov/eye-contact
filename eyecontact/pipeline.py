@@ -374,7 +374,8 @@ def run(inp, out, cfg, max_frames=None):
             gz.close()
         if det:
             det.close()
-    video_io.concat(segments, out, audio_from=inp, workdir=workdir)
+    av_offset = meta["start_time"] - meta["audio_start_time"] if meta["audio_codec"] else 0.0
+    video_io.concat(segments, out, audio_from=inp, workdir=workdir, av_offset=av_offset)
     per = {k: sum((r[k] for r in chunk_recs), []) for k in ("gaze_yaw", "gaze_pitch", "head_yaw", "head_pitch",
                                                             "conf", "changed", "box")}
     n = len(per["changed"])
