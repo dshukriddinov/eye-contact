@@ -77,7 +77,7 @@ def probe(path):
         w, h = h, w
     return {
         "width": w, "height": h, "fps": fps, "nb_frames": nb, "duration": dur, "rotation": rot,
-        "start_time": float(v.get("start_time") or 0.0),
+        "start_time": _first_frame_time(path, float(v.get("start_time") or 0.0)),
         "codec": v["codec_name"], "pix_fmt": v.get("pix_fmt"),
         "bit_rate": int(v.get("bit_rate") or d["format"].get("bit_rate") or 0),
         "color_range": v.get("color_range"), "color_space": v.get("color_space"),
@@ -87,6 +87,17 @@ def probe(path):
         "audio_start_time": float(a.get("start_time") or 0.0) if a else None,
         "format_start_time": float(d["format"].get("start_time") or 0.0),
     }
+
+
+def _first_frame_time(path, stream_start):
+    """Birinchi ko'rsatiladigan kadr vaqti. Kalit kadrdan oldin ko'rsatiladigan kadrlar bo'lsa (ochiq GOP, edit
+    list'siz MKV — masalan Dars Studio qismlarni ulagan fayl) stream start_time kalit kadrnikini beradi (0.08 s) va
+    -ss 2 kadr kech boshlanardi; dekoder birinchi kadrni eng kichik pts da chiqaradi."""
+    r = subprocess.run([FFPROBE, "-v", "error", "-select_streams", "v:0", "-read_intervals", "%+#32",
+                        "-show_entries", "packet=pts_time", "-of", "csv=p=0", path],
+                       capture_output=True, encoding="utf-8", errors="replace")
+    pts = [float(x.strip(",")) for x in (r.stdout or "").split() if x.strip(",") not in ("", "N/A")]
+    return min([stream_start, *pts])
 
 
 def file_id(path, block=1 << 20):
