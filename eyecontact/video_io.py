@@ -7,6 +7,7 @@ import subprocess
 from fractions import Fraction
 
 import numpy as np
+import xxhash
 
 
 _RUNTIME_FFMPEG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "runtime", "ffmpeg")
@@ -61,6 +62,12 @@ def probe(path):
                             "-show_entries", "stream=nb_read_packets", "-of", "csv=p=0", path],
                            capture_output=True, encoding="utf-8", errors="replace")
         nb = int((c.stdout or "").strip() or round(dur * fps))
+    vfr = v.get("r_frame_rate") != v.get("avg_frame_rate")
+    if vfr:
+        # EC-2: paketlar soni tushgan kadrlarni hisobga olmaydi (294 != 299). FrameReader(cfr=True) butun video
+        # davomiyligini fps to'rida qoplaydi, shuning uchun kadr soni = round(video davomiyligi x fps).
+        # Video stream davomiyligi (format davomiyligi uzunroq audioni ham o'z ichiga oladi).
+        nb = round(float(v.get("duration") or dur) * fps)
     rot = 0
     for sd in v.get("side_data_list", []):
         if "rotation" in sd:
@@ -70,14 +77,38 @@ def probe(path):
         w, h = h, w
     return {
         "width": w, "height": h, "fps": fps, "nb_frames": nb, "duration": dur, "rotation": rot,
-        "start_time": float(v.get("start_time") or 0.0),
+        "start_time": _first_frame_time(path, float(v.get("start_time") or 0.0)),
         "codec": v["codec_name"], "pix_fmt": v.get("pix_fmt"),
         "bit_rate": int(v.get("bit_rate") or d["format"].get("bit_rate") or 0),
         "color_range": v.get("color_range"), "color_space": v.get("color_space"),
         "color_primaries": v.get("color_primaries"), "color_trc": v.get("color_trc"),
-        "vfr": v.get("r_frame_rate") != v.get("avg_frame_rate"),
+        "vfr": vfr,
         "audio_codec": a["codec_name"] if a else None,
+        "audio_start_time": float(a.get("start_time") or 0.0) if a else None,
+        "format_start_time": float(d["format"].get("start_time") or 0.0),
     }
+
+
+def _first_frame_time(path, stream_start):
+    """Birinchi ko'rsatiladigan kadr vaqti. Kalit kadrdan oldin ko'rsatiladigan kadrlar bo'lsa (ochiq GOP, edit
+    list'siz MKV — masalan Dars Studio qismlarni ulagan fayl) stream start_time kalit kadrnikini beradi (0.08 s) va
+    -ss 2 kadr kech boshlanardi; dekoder birinchi kadrni eng kichik pts da chiqaradi."""
+    r = subprocess.run([FFPROBE, "-v", "error", "-select_streams", "v:0", "-read_intervals", "%+#32",
+                        "-show_entries", "packet=pts_time", "-of", "csv=p=0", path],
+                       capture_output=True, encoding="utf-8", errors="replace")
+    pts = [float(x.strip(",")) for x in (r.stdout or "").split() if x.strip(",") not in ("", "N/A")]
+    return min([stream_start, *pts])
+
+
+def file_id(path, block=1 << 20):
+    """Fayl identifikatori (EC-3): hajm, mtime_ns, boshidagi va oxiridagi 1 MB ning xxhash64'i.
+    Butun faylni o'qimaydi (25 min video ~4 GB), lekin boshqa fayl yoki qayta yozilgan faylni ajratadi."""
+    st = os.stat(path)
+    with open(path, "rb") as f:
+        head = xxhash.xxh64_hexdigest(f.read(block))
+        f.seek(max(0, st.st_size - block))
+        tail = xxhash.xxh64_hexdigest(f.read(block))
+    return f"{st.st_size}-{st.st_mtime_ns}-{head}-{tail}"
 
 
 def safe_container(out, audio_codec):
@@ -111,7 +142,17 @@ class FrameReader:
         self.w, self.h, self.pix_fmt = width, height, pix_fmt
         self.frame_bytes = frame_bytes(width, height, pix_fmt)
         cmd = [FFMPEG, "-v", "error", "-nostdin"]
-        if start:
+        vf = []
+        if cfr:
+            # EC-2 (VFR): -fps_mode cfr kadr to'rini seek nuqtasidan quradi, chunk chegarasida 1 kadr siljish
+            # bo'ladi. Shuning uchun -copyts (absolyut vaqt) + fps filtri: to'r butun fayl uchun bir xil, kadr i
+            # = slot round(start_time x fps) + i. 1 s oldinroqdan o'qiladi: tushgan kadr o'rnini oldingisi to'ldirsin.
+            if start:
+                cmd += ["-ss", f"{max(0.0, start_time + float(start / fps) - 1.0):.6f}"]
+            cmd += ["-copyts"]
+            first = start + round(Fraction(start_time).limit_denominator(1_000_000) * fps)
+            vf += [f"fps={fps}:round=near", f"trim=start_pts={first}"]
+        elif start:
             # -ss mutlaq stream vaqti: stream start_time + (start - 0.5) kadr -> aynan `start` kadrdan boshlanadi
             cmd += ["-ss", f"{start_time + float((start - Fraction(1, 2)) / fps):.6f}"]
         cmd += ["-i", path]
@@ -119,8 +160,10 @@ class FrameReader:
             cmd += ["-frames:v", str(count)]
         rng = "pc" if full else "tv"
         if pix_fmt == "bgr24":
-            cmd += ["-vf", f"scale=in_color_matrix={matrix}:in_range={rng}:out_range=pc"]
-        cmd += ["-fps_mode", "cfr" if cfr else "passthrough", "-f", "rawvideo", "-pix_fmt", pix_fmt, "-"]
+            vf.append(f"scale=in_color_matrix={matrix}:in_range={rng}:out_range=pc")
+        if vf:
+            cmd += ["-vf", ",".join(vf)]
+        cmd += ["-fps_mode", "passthrough", "-f", "rawvideo", "-pix_fmt", pix_fmt, "-"]
         self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=self.frame_bytes * 4)
 
     def read(self):
@@ -202,13 +245,19 @@ class FrameWriter:
         self.close()
 
 
-def concat(segments, out, audio_from=None, workdir=None):
-    """Segmentlarni stream-copy bilan birlashtiradi, audio kirishdan copy."""
+def concat(segments, out, audio_from=None, workdir=None, video_offset=0.0):
+    """Segmentlarni stream-copy bilan birlashtiradi, audio kirishdan copy.
+    video_offset (EC-1): kirishdagi video start_time - fayl (format) start_time, s. ffmpeg audio kirishni fayl
+    boshiga nisbatan siljitadi (audio = a_start - f_start), segmentlar esa 0 dan boshlanadi. Video shu qiymatga
+    surilsa (video - audio) farqi kirishdagidek qoladi. f_start = eng kichik stream boshi, shuning uchun >= 0."""
     lst = os.path.join(workdir or os.path.dirname(segments[0]), "concat.txt")
     with open(lst, "w", encoding="utf-8") as f:
         for s in segments:
             f.write(f"file '{os.path.basename(s)}'\n")
-    cmd = [FFMPEG, "-v", "error", "-nostdin", "-y", "-f", "concat", "-safe", "0", "-i", os.path.basename(lst)]
+    cmd = [FFMPEG, "-v", "error", "-nostdin", "-y"]
+    if audio_from and video_offset > 0:
+        cmd += ["-itsoffset", f"{video_offset:.6f}"]
+    cmd += ["-f", "concat", "-safe", "0", "-i", os.path.basename(lst)]
     if audio_from:
         cmd += ["-i", os.path.abspath(audio_from), "-map", "0:v:0", "-map", "1:a:0?", "-c:a", "copy"]
     cmd += ["-c:v", "copy"]

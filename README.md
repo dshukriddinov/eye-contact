@@ -75,6 +75,7 @@ runtime\python\python.exe -m eyecontact.cli --help
 | `--codec h264\|hevc` | h264 | DaVinci Resolve bepul versiyasi Windows'da HEVC ochmaydi |
 | `--chunk-sec` | 120 | chunk uzunligi; har chunk segment + JSON (checkpoint, resume) |
 | `--max-head-yaw/-pitch`, `--max-gaze` | 30/20/30 | bundan tashqarida Maxine tuzatmaydi (gisterezis) |
+| `--patches-out DIR` | — | video o'rniga ko'z patchlari (Dars Studio uchun): `DIR/chunk_XXXXX.npz` + `meta.json`, OUT kerak emas |
 
 Chiqish: video qayta kodlangan (NVENC, bo'lmasa CPU x264), audio `-c:a copy` (bayt-aniq), rang teglari saqlanadi,
 natija yonida ortiqcha fayl qoldirilmaydi. PCM audio MP4 ichida ko'p playerda ovozsiz, shuning uchun `.mov`.
@@ -93,6 +94,11 @@ ko'z atrofida). Qolgan hamma piksel bayt-aniq (lossless rejimda `mask_leak == 0`
 
 Tekshirish: `runtime\python\python.exe tests\test_smoke.py` (10 s klip, 3 chunk, mask_leak == 0, audio teng),
 `runtime\python\python.exe tests\test_gui.py` (UI odamsiz).
+GPU va haqiqiy klipsiz (Linux'da ham): `python -m pytest tests/test_pipeline_stub.py` (Maxine o'rniga stub, sintetik
+media: bayt-aniqlik, A/V siljish, VFR, resume kaliti, patch fayli). Kerak: `pip install pytest` + `requirements.txt`.
+
+Yangilashda: `requirements.txt` ga `xxhash` qo'shildi. Mavjud portativ paketda bir marta:
+`runtime\python\python.exe -m pip install xxhash`.
 
 ## Muammo chiqsa
 

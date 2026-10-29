@@ -15,7 +15,7 @@ import time
 import cv2
 import numpy as np
 
-from . import video_io
+from . import patches, video_io
 from .maxine import GazeRedirector
 
 WARMUP = 25          # chunk boshida Maxine temporal holatini isitish uchun kadrlar (yozilmaydi)
@@ -231,12 +231,14 @@ class Config:
         self.max_gaze = 30.0
         self.quiet = False
         self.on_progress = None    # callable(done_frames, total_frames), UI uchun
+        self.patches_out = None    # papka: video o'rniga ko'z patchlari (EC-4)
+        self.input_id = None       # run() to'ldiradi: video_io.file_id(kirish) (EC-3)
         self.__dict__.update(kw)
 
     def key(self):
         """Natijaga ta'sir qiladigan sozlamalar. Resume faqat shu kalit bir xil bo'lgan chunklarni qayta ishlatadi."""
-        names = ("chunk_sec", "codec", "bitrate", "cq", "lossless", "eye_size", "blend", "lid_open", "iris_tone",
-                 "upscale", "temporal", "max_head_yaw", "max_head_pitch", "max_gaze")
+        names = ("input_id", "chunk_sec", "codec", "bitrate", "cq", "lossless", "eye_size", "blend", "lid_open",
+                 "iris_tone", "upscale", "temporal", "max_head_yaw", "max_head_pitch", "max_gaze")
         return "|".join(f"{n}={getattr(self, n)}" for n in names)
 
 
@@ -267,12 +269,15 @@ def process_chunk(inp, seg_path, meta, start, end, gz, det, cfg, color):
     ry = video_io.FrameReader(inp, w, h, fps, start - warm, end - start + warm, "yuv420p", matrix, full,
                               meta["vfr"], meta["start_time"])
     qin, qout = queue.Queue(maxsize=8), queue.Queue(maxsize=8)
-    bitrate = None if cfg.lossless else (cfg.bitrate if cfg.bitrate is not None else int(meta["bit_rate"] * 1.5) or None)
-    wr = video_io.FrameWriter(seg_path, w, h, fps, pix_fmt="yuv420p", bitrate=bitrate or None, cq=cfg.cq,
-                              codec=cfg.codec, color=color, lossless=cfg.lossless)
+    patch_mode = bool(cfg.patches_out)   # EC-4: encode yo'q, faqat o'zgargan YUV baytlar seg_path (.npz) ga
+    precs = []
     threading.Thread(target=_reader_thread, args=(rb, ry, qin), daemon=True).start()
-    tw = threading.Thread(target=_writer_thread, args=(wr, qout), daemon=True)
-    tw.start()
+    if not patch_mode:
+        bitrate = None if cfg.lossless else (cfg.bitrate if cfg.bitrate is not None else int(meta["bit_rate"] * 1.5) or None)
+        wr = video_io.FrameWriter(seg_path, w, h, fps, pix_fmt="yuv420p", bitrate=bitrate or None, cq=cfg.cq,
+                                  codec=cfg.codec, color=color, lossless=cfg.lossless)
+        tw = threading.Thread(target=_writer_thread, args=(wr, qout), daemon=True)
+        tw.start()
     rec = {k: [] for k in ("gaze_yaw", "gaze_pitch", "head_yaw", "head_pitch", "conf", "changed", "box")}
     out = np.empty((h, w, 3), np.uint8)
     roi = FaceROI(w, h) if cfg.upscale else None   # har chunk boshida qayta aniqlanadi: resume deterministik
@@ -293,8 +298,12 @@ def process_chunk(inp, seg_path, meta, start, end, gz, det, cfg, color):
                 patch = tone.apply(o, patch, mk)
         if i >= 0:
             if box:
+                before = patches.snapshot(fy, w, h, box) if patch_mode else None
                 paste_patch(fy, w, h, patch, box, matrix, full, orig=o)
-            qout.put(fy)
+                if patch_mode:
+                    precs.append(patches.record(start + i, box, before, fy, w, h))
+            if not patch_mode:
+                qout.put(fy)
             for k in ("gaze_yaw", "gaze_pitch", "head_yaw", "head_pitch", "conf"):
                 rec[k].append(round(float(info[k]), 2))
             rec["changed"].append(bool(box))
@@ -302,9 +311,12 @@ def process_chunk(inp, seg_path, meta, start, end, gz, det, cfg, color):
             if cfg.on_progress and i % 50 == 0:
                 cfg.on_progress(start + i, cfg.total_frames)
         i += 1
-    qout.put(None)
-    tw.join()
-    wr.close()
+    if patch_mode:
+        patches.write_chunk(seg_path, precs)
+    else:
+        qout.put(None)
+        tw.join()
+        wr.close()
     n = len(rec["changed"])
     if n != end - start:
         raise RuntimeError(f"chunk {start}-{end}: kutilgan {end - start} kadr, dekoddan {n} keldi")
@@ -312,26 +324,33 @@ def process_chunk(inp, seg_path, meta, start, end, gz, det, cfg, color):
 
 
 def run(inp, out, cfg, max_frames=None):
+    """out: natija video. cfg.patches_out berilsa (EC-4) out ishlatilmaydi: video encode qilinmaydi, papkaga
+    chunk_XXXXX.npz (patches.py formati) + meta.json yoziladi."""
     t0 = time.time()
+    patch_mode = bool(cfg.patches_out)
     meta = video_io.probe(inp)
     if meta["pix_fmt"] not in SUPPORTED_PIX:
         raise SystemExit(f"xato: pix_fmt {meta['pix_fmt']} qo'llanmaydi (faqat 8-bit 4:2:0: {SUPPORTED_PIX})")
     if meta["vfr"]:
-        log("ogohlantirish: o'zgaruvchan fps (VFR), CFR ga o'tkaziladi; kadr soni farq qilishi mumkin", cfg.quiet)
-    if cfg.lossless and not out.lower().endswith(".mkv"):
+        log(f"ogohlantirish: o'zgaruvchan fps (VFR), CFR ga o'tkaziladi: {meta['nb_frames']} kadr "
+            f"(davomiylik x fps); tushgan kadrlar o'rnini oldingi kadr to'ldiradi", cfg.quiet)
+    if patch_mode:
+        out = cfg.patches_out
+    elif cfg.lossless and not out.lower().endswith(".mkv"):
         out += ".mkv"
         log(f"ogohlantirish: lossless FFV1 -> MKV: {out}", cfg.quiet)
-    safe = video_io.safe_container(out, meta["audio_codec"])
+    safe = out if patch_mode else video_io.safe_container(out, meta["audio_codec"])
     if safe != out:
         log(f"ogohlantirish: audio {meta['audio_codec']} MP4 ichida ko'p dasturda ovozsiz; chiqish MOV: {safe}", cfg.quiet)
         out = safe
     w, h, fps = meta["width"], meta["height"], meta["fps"]
     total = meta["nb_frames"] if max_frames is None else min(meta["nb_frames"], max_frames)
     cfg.total_frames = total
+    cfg.input_id = video_io.file_id(inp)   # resume kaliti: boshqa fayl bilan eski chunk'lar ishlatilmasin
     log(f"kirish: {w}x{h} @ {fps} fps, {total} kadr, {meta['codec']} {meta['pix_fmt']} "
         f"{meta['bit_rate'] // 1000} kbps, audio {meta['audio_codec']}", cfg.quiet)
     color = {k: meta[k] for k in ("color_range", "color_space", "color_primaries", "color_trc")}
-    workdir = cfg.workdir or out + ".work"
+    workdir = out if patch_mode else (cfg.workdir or out + ".work")
     os.makedirs(workdir, exist_ok=True)
     chunk = max(1, int(round(cfg.chunk_sec * fps)))
     nchunks = math.ceil(total / chunk)
@@ -341,8 +360,8 @@ def run(inp, out, cfg, max_frames=None):
     try:
         for k in range(nchunks):
             start, end = k * chunk, min(total, (k + 1) * chunk)
-            seg = os.path.join(workdir, f"seg_{k:05d}{ext}")
-            segj = seg + ".json"
+            seg = os.path.join(workdir, f"chunk_{k:05d}.npz" if patch_mode else f"seg_{k:05d}{ext}")
+            segj = os.path.splitext(seg)[0] + ".json" if patch_mode else seg + ".json"
             segments.append(seg)
             if cfg.resume and os.path.exists(seg) and os.path.exists(segj):
                 with open(segj, encoding="utf-8") as f:
@@ -374,7 +393,20 @@ def run(inp, out, cfg, max_frames=None):
             gz.close()
         if det:
             det.close()
-    video_io.concat(segments, out, audio_from=inp, workdir=workdir)
+    if patch_mode:
+        matrix, full = video_io.color_params(meta)
+        pmeta = {"format_version": patches.FORMAT_VERSION, "source": os.path.abspath(inp),
+                 "source_id": cfg.input_id, "width": w, "height": h, "fps": str(fps), "nb_frames": total,
+                 "pix_fmt": "yuv420p", "source_pix_fmt": meta["pix_fmt"], "color_matrix": matrix,
+                 "color_range": "pc" if full else "tv", "vfr": meta["vfr"], "cfg_key": cfg.key(),
+                 "chunks": [{"file": os.path.basename(s), "start": r["start"], "end": r["end"],
+                             "frames_patched": int(sum(r["changed"]))} for s, r in zip(segments, chunk_recs)]}
+        with open(os.path.join(out, "meta.json.tmp"), "w", encoding="utf-8") as f:
+            json.dump(pmeta, f, ensure_ascii=False, indent=1)
+        os.replace(os.path.join(out, "meta.json.tmp"), os.path.join(out, "meta.json"))
+    else:
+        video_io.concat(segments, out, audio_from=inp, workdir=workdir,
+                        video_offset=meta["start_time"] - meta["format_start_time"])
     per = {k: sum((r[k] for r in chunk_recs), []) for k in ("gaze_yaw", "gaze_pitch", "head_yaw", "head_pitch",
                                                             "conf", "changed", "box")}
     n = len(per["changed"])
@@ -391,6 +423,6 @@ def run(inp, out, cfg, max_frames=None):
         "config": {k: v for k, v in vars(cfg).items() if not callable(v)}, "input_meta": {k: (str(v) if k == "fps" else v) for k, v in meta.items()},
         "per_frame": per,
     }
-    if not cfg.keep_work:
+    if not cfg.keep_work and not patch_mode:
         shutil.rmtree(workdir, ignore_errors=True)
     return report

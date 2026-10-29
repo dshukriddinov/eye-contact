@@ -37,7 +37,7 @@ MIN_CONF = 0.15
 THRESH = {"identity_median": (">=", 0.97), "identity_min": (">=", 0.93), "ear_drift": ("<=", 0.15),
           "blink_count_ratio": ("range", (0.95, 1.05)), "flicker_ratio": ("<=", 1.5),
           "frame_count_equal": ("==", True), "duration_diff_frames": ("<=", 1.0), "audio_hash_equal": ("==", True),
-          "mask_leak": ("<=", 0)}
+          "mask_leak": ("<=", 0), "av_offset_frames": ("<=", 1.0)}
 INFO = {"gaze_success": (">=", 0.90)}  # hisobotda, verdictga kirmaydi
 
 
@@ -45,6 +45,14 @@ def audio_md5(path):
     r = subprocess.run([video_io.FFMPEG, "-v", "error", "-i", path, "-map", "0:a:0?", "-c", "copy", "-f", "md5", "-"],
                        capture_output=True, encoding="utf-8", errors="replace")
     return r.stdout.strip()
+
+
+def av_offset_ms(mi, mr):
+    """(video - audio start_time) chiqishda minus kirishda, ms. Audio yo'q bo'lsa None."""
+    if mi["audio_codec"] is None or mr["audio_codec"] is None:
+        return None
+    off = lambda m: m["start_time"] - m["audio_start_time"]
+    return round((off(mr) - off(mi)) * 1000, 2)
 
 
 def ear68(lm):
@@ -180,6 +188,9 @@ def main(argv=None):
          "audio_hash_equal": audio_md5(a.original) == audio_md5(a.result),
          "frames_processed": int(sum(changed))}
     m["mask_leak"] = mask_leak(a.original, a.result, boxes, mi) if mr["codec"] == "ffv1" else None
+    # EC-1: chiqishdagi (video - audio) start_time farqi kirishdagidan qancha farq qiladi; chegara ±1 kadr
+    m["av_offset_ms"] = av_offset_ms(mi, mr)
+    m["av_offset_frames"] = round(abs(m["av_offset_ms"]) * float(fps) / 1000, 2) if m["av_offset_ms"] is not None else None
 
     matrix, full = video_io.color_params(mi)
     ro = video_io.FrameReader(a.original, w, h, fps, count=a.max_frames, matrix=matrix, full=full)

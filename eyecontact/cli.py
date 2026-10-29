@@ -12,7 +12,7 @@ from . import pipeline, video_io
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="eyecontact", description=__doc__)
     ap.add_argument("inp", metavar="IN")
-    ap.add_argument("out", metavar="OUT")
+    ap.add_argument("out", metavar="OUT", nargs="?", help="natija video (--patches-out bo'lsa kerak emas)")
     ap.add_argument("--chunk-sec", type=int, default=120, help="chunk uzunligi soniyada (default 120)")
     ap.add_argument("--resume", action="store_true", help="mavjud chunk natijalarini qayta ishlamaydi")
     ap.add_argument("--preview", type=float, metavar="SEC", help="faqat birinchi SEC soniya, split-screen chiqish")
@@ -20,6 +20,8 @@ def main(argv=None):
     ap.add_argument("--bitrate", type=int, metavar="BPS", help="video bitrate; default kirish x1.5; 0 -> --cq")
     ap.add_argument("--cq", type=int, default=18, help="NVENC cq / x264 crf, --bitrate 0 bo'lsa (default 18)")
     ap.add_argument("--lossless", action="store_true", help="FFV1/MKV, eval uchun")
+    ap.add_argument("--patches-out", metavar="DIR",
+                    help="video o'rniga ko'z patchlarini yozish (Dars Studio uchun): DIR/chunk_XXXXX.npz + meta.json")
     ap.add_argument("--report", metavar="PATH",
                     help="kadr-kadr hisobotni shu faylga yozish (default: hisobot yozilmaydi)")
     ap.add_argument("--workdir", metavar="PATH", help="vaqtinchalik chunk papka (default OUT.work)")
@@ -40,9 +42,13 @@ def main(argv=None):
     ap.add_argument("-q", "--quiet", action="store_true")
     ap.add_argument("--progress", action="store_true", help="UI uchun: 'PROGRESS done total' va 'OUTPUT path' satrlari")
     a = ap.parse_args(argv)
+    if not a.out and not a.patches_out:
+        ap.error("OUT yoki --patches-out kerak")
+    if a.patches_out and a.preview:
+        ap.error("--preview va --patches-out birga ishlamaydi")
 
     cfg = pipeline.Config(chunk_sec=a.chunk_sec, resume=a.resume, codec=a.codec, bitrate=a.bitrate, cq=a.cq,
-                          lossless=a.lossless, workdir=a.workdir, keep_work=a.keep_work, eye_size=a.eye_size,
+                          lossless=a.lossless, workdir=a.workdir, patches_out=a.patches_out, keep_work=a.keep_work, eye_size=a.eye_size,
                           blend=a.blend, lid_open=max(0.0, min(1.0, a.lid_open)), upscale=not a.no_upscale,
                           iris_tone=not a.no_iris_tone,
                           on_progress=(lambda d, t: print(f"PROGRESS {d} {t}", file=sys.stderr, flush=True))

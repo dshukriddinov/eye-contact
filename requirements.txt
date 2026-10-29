@@ -1,3 +1,4 @@
 # Dastur (UI va CLI) uchun. Baholash vositasi uchun qo'shimcha: requirements-eval.txt
 numpy>=2
 opencv-python-headless>=4.10
+xxhash>=3  # EC-3: resume kaliti (fayl identifikatori), BSD-2-Clause
